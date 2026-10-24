@@ -45,17 +45,22 @@ import { TrafficModule } from './modules/traffic/traffic.module';
     // BullMQ Redis Connection
     BullModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        connection: {
-          host: configService.get<string>('REDIS_HOST') || 'localhost',
-          port: parseInt(configService.get<string>('REDIS_PORT') || '6379', 10),
-          password: configService.get<string>('REDIS_PASSWORD') || undefined,
-          connectTimeout: 2000,
-          commandTimeout: 2000,
-          enableOfflineQueue: false,
-          retryStrategy: (times) => (times > 1 ? null : 1000),
-        },
-      }),
+      useFactory: (configService: ConfigService) => {
+        const host = configService.get<string>('REDIS_HOST') || 'localhost';
+        const port = parseInt(configService.get<string>('REDIS_PORT') || '6379', 10);
+        const password = configService.get<string>('REDIS_PASSWORD') || undefined;
+        const useTls = configService.get<string>('REDIS_TLS') === 'true' || host.endsWith('upstash.io');
+        return {
+          connection: {
+            host,
+            port,
+            password,
+            connectTimeout: 10000,
+            tls: useTls ? {} : undefined,
+            retryStrategy: (times: number) => Math.min(times * 100, 3000),
+          },
+        };
+      },
       inject: [ConfigService],
     }),
 
